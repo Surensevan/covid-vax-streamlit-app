@@ -52,7 +52,7 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction (Updated with correct feature list) ---
+# --- Model Prediction (Updated with exact training features) ---
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
@@ -60,13 +60,12 @@ if model_loaded:
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
-        'daily_partial_child', 'daily_full_child', 'daily_booster_child',
-        'daily_booster2_child', 'daily_partial_adolescent', 'daily_full_adolescent',
-        'daily_booster_adolescent', 'daily_booster2_adolescent', 'daily_partial_adult',
-        'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
-        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly',
-        'daily_booster2_elderly', 'admitted_covid', 'discharged_covid',
-        'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid'
+        'daily_partial_child', 'daily_full_child', 'daily_booster_child', 'daily_booster2_child',
+        'daily_partial_adolescent', 'daily_full_adolescent', 'daily_booster_adolescent', 'daily_booster2_adolescent',
+        'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
+        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
+        'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
+        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
     ]
     features = latest_row[feature_cols].values.reshape(1, -1)
     prediction = model.predict(features)[0]
