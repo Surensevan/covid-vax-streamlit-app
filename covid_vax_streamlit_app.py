@@ -68,8 +68,18 @@ if model_loaded:
         'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
     ]
     features = latest_row[feature_cols].values.reshape(1, -1)
-    prediction = model.predict(features)[0]
-    st.metric("Predicted New Cases (next day)", int(prediction))
+
+    # Debug output
+    st.write(f"✅ Model expects {model.n_features_in_} features")
+    st.write(f"📥 Input shape: {features.shape}")
+    st.write("🧪 Any NaNs in input:", pd.DataFrame(features, columns=feature_cols).isnull().any().any())
+    st.write("🔍 Input Preview:", pd.DataFrame(features, columns=feature_cols))
+
+    try:
+        prediction = model.predict(features)[0]
+        st.metric("Predicted New Cases (next day)", int(prediction))
+    except ValueError as e:
+        st.error(f"Prediction failed: {e}")
 else:
     st.warning("Model file not found. Please ensure 'random_forest_model.pkl' is in the folder.")
 
