@@ -52,20 +52,15 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction (Placeholder) ---
+# --- Model Prediction (Updated with correct feature matching) ---
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
-    # Example: Use the latest available features to make prediction
-    # You should customize this based on actual feature engineering used in training
     latest_row = state_df.dropna().iloc[-1]
-    features = [
-        latest_row['daily_full_adult'],
-        latest_row['daily_partial_adult'],
-        latest_row['cases_active'],
-        latest_row['cases_recovered'],
-    ]
-    prediction = model.predict([features])[0]
+    excluded = ['date', 'cases_new', 'state']
+    feature_cols = [col for col in state_df.columns if col not in excluded]
+    features = latest_row[feature_cols].values.reshape(1, -1)
+    prediction = model.predict(features)[0]
     st.metric("Predicted New Cases (next day)", int(prediction))
 else:
     st.warning("Model file not found. Please ensure 'random_forest_model.pkl' is in the folder.")
