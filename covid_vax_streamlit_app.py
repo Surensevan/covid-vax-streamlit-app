@@ -107,14 +107,18 @@ if model_loaded:
 
         # --- Actual value comparison ---
         next_day = selected_date + pd.Timedelta(days=1)
-        next_day_data = state_df[state_df['date'] == next_day]
+        next_day_data = df[(df['state'] == selected_state) & (df['date'] == next_day)]
 
         if not next_day_data.empty:
             actual_cases = next_day_data['cases_new'].values[0]
             st.metric("📊 Actual Cases (Next Day)", int(actual_cases))
+
+            if actual_cases == 0:
+                st.warning("⚠️ Actual cases = 0. This may indicate missing or delayed data.")
+
             st.write(f"🧮 Prediction Error: {int(prediction) - int(actual_cases)}")
         else:
-            st.info("No actual data available for the next day.")
+            st.info("ℹ️ No actual data available for the selected next day.")
 
     except ValueError as e:
         st.error(f"Prediction failed: {e}")
