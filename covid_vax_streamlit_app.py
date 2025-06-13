@@ -52,13 +52,22 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction (Updated with correct feature matching) ---
+# --- Model Prediction (Updated with correct feature list) ---
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
     latest_row = state_df.dropna().iloc[-1]
-    excluded = ['date', 'cases_new', 'state']
-    feature_cols = [col for col in state_df.columns if col not in excluded]
+    feature_cols = [
+        'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
+        'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
+        'daily_partial_child', 'daily_full_child', 'daily_booster_child',
+        'daily_booster2_child', 'daily_partial_adolescent', 'daily_full_adolescent',
+        'daily_booster_adolescent', 'daily_booster2_adolescent', 'daily_partial_adult',
+        'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
+        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly',
+        'daily_booster2_elderly', 'admitted_covid', 'discharged_covid',
+        'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid'
+    ]
     features = latest_row[feature_cols].values.reshape(1, -1)
     prediction = model.predict(features)[0]
     st.metric("Predicted New Cases (next day)", int(prediction))
