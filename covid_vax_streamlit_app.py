@@ -62,8 +62,25 @@ st.pyplot(fig2)
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
-    state_df = state_df.dropna()
-    latest_row = state_df.iloc[-1]
+    # Drop NA rows for required features
+    state_df = state_df.dropna(subset=[
+        'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
+        'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
+        'daily_partial_child', 'daily_full_child', 'daily_booster_child', 'daily_booster2_child',
+        'daily_partial_adolescent', 'daily_full_adolescent', 'daily_booster_adolescent', 'daily_booster2_adolescent',
+        'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
+        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
+        'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
+        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax',
+        'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
+    ])
+
+    # Select prediction date
+    valid_dates = state_df['date'].dt.strftime('%Y-%m-%d').tolist()
+    selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
+    selected_date = pd.to_datetime(selected_date_str)
+    selected_row = state_df[state_df['date'] == selected_date].iloc[0]
+
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
@@ -75,7 +92,8 @@ if model_loaded:
         'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
         'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
     ]
-    features = latest_row[feature_cols].values.reshape(1, -1)
+
+    features = selected_row[feature_cols].values.reshape(1, -1)
 
     # Debug output
     st.write(f"✅ Model expects {model.n_features_in_} features")
