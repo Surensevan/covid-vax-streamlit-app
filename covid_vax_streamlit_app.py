@@ -80,9 +80,12 @@ if model_loaded:
     ])
 
     # Select prediction date
+    next_day_cases = df[df['state'] == selected_state][['date', 'cases_new']].copy()
+    next_day_cases['date'] = next_day_cases['date'] - pd.Timedelta(days=1)
     valid_dates = state_df[state_df['date'].isin(
-        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
+        next_day_cases[next_day_cases['cases_new'] > 0]['date']
     )]['date'].dt.strftime('%Y-%m-%d').tolist()
+
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
     selected_row = state_df[state_df['date'] == selected_date].iloc[0]
@@ -110,21 +113,6 @@ if model_loaded:
     try:
         prediction = model.predict(features)[0]
         st.metric("Predicted New Cases (next day)", int(prediction))
-
-        # --- Actual value comparison ---
-        next_day = selected_date + pd.Timedelta(days=1)
-        next_day_data = df[(df['state'] == selected_state) & (df['date'] == next_day)]
-
-        if not next_day_data.empty:
-            actual_cases = next_day_data['cases_new'].values[0]
-            st.metric("📊 Actual Cases (Next Day)", int(actual_cases))
-
-            if actual_cases == 0:
-                st.warning("⚠️ Actual cases = 0. This may indicate missing or delayed data.")
-
-            st.write(f"🧮 Prediction Error: {int(prediction) - int(actual_cases)}")
-        else:
-            st.info("ℹ️ No actual data available for the selected next day.")
 
     except ValueError as e:
         st.error(f"Prediction failed: {e}")
