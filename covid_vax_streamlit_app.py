@@ -13,13 +13,17 @@ def load_data():
 
 df, demo_df = load_data()
 
-# Load trained model
-try:
-    model = joblib.load("random_forest_model.pkl")
+# Load trained model via upload
+uploaded_model = st.sidebar.file_uploader("Upload Model File (.pkl)", type=["pkl"])
+
+if uploaded_model is not None:
+    model = joblib.load(uploaded_model)
     model_loaded = True
-except FileNotFoundError:
+    st.sidebar.success("✅ Model loaded successfully.")
+else:
     model = None
     model_loaded = False
+    st.sidebar.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 
@@ -123,7 +127,7 @@ if model_loaded:
     except ValueError as e:
         st.error(f"Prediction failed: {e}")
 else:
-    st.warning("Model file not found. Please ensure 'random_forest_model.pkl' is in the folder.")
+    st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
 
 # --- Demographic Info ---
 st.sidebar.markdown("---")
