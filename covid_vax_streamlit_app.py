@@ -65,7 +65,8 @@ if model_loaded:
         'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
         'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
         'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
-        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
+        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
+        'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
     ]
     features = latest_row[feature_cols].values.reshape(1, -1)
 
