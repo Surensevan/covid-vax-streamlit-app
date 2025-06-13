@@ -13,8 +13,14 @@ def load_data():
 
 df, demo_df = load_data()
 
-# Load trained model via upload
-uploaded_model = st.sidebar.file_uploader("Upload Model File (.pkl)", type=["pkl"])
+st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
+
+# Sidebar - State selection
+states = df['state'].unique()
+selected_state = st.sidebar.selectbox("Select a State", sorted(states))
+
+# Load trained model via upload AFTER state selection
+uploaded_model = st.sidebar.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
     model = joblib.load(uploaded_model)
@@ -24,12 +30,6 @@ else:
     model = None
     model_loaded = False
     st.sidebar.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
-
-st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
-
-# Sidebar - State selection
-states = df['state'].unique()
-selected_state = st.sidebar.selectbox("Select a State", sorted(states))
 
 # Filter by state
 state_df = df[df['state'] == selected_state].copy()
