@@ -104,6 +104,18 @@ if model_loaded:
     try:
         prediction = model.predict(features)[0]
         st.metric("Predicted New Cases (next day)", int(prediction))
+
+        # --- Actual value comparison ---
+        next_day = selected_date + pd.Timedelta(days=1)
+        next_day_data = state_df[state_df['date'] == next_day]
+
+        if not next_day_data.empty:
+            actual_cases = next_day_data['cases_new'].values[0]
+            st.metric("📊 Actual Cases (Next Day)", int(actual_cases))
+            st.write(f"🧮 Prediction Error: {int(prediction) - int(actual_cases)}")
+        else:
+            st.info("No actual data available for the next day.")
+
     except ValueError as e:
         st.error(f"Prediction failed: {e}")
 else:
