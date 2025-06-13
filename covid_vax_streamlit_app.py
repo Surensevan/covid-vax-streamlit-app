@@ -30,6 +30,12 @@ selected_state = st.sidebar.selectbox("Select a State", sorted(states))
 # Filter by state
 state_df = df[df['state'] == selected_state].copy()
 
+# --- Add lag features (required for prediction) ---
+state_df = state_df.sort_values("date")
+state_df['cases_lag_1'] = state_df['cases_new'].shift(1)
+state_df['cases_lag_7'] = state_df['cases_new'].shift(7)
+state_df['cases_ma_7'] = state_df['cases_new'].rolling(window=7).mean()
+
 # --- Chart: Daily New Cases ---
 st.subheader(f"🦠 Daily New COVID-19 Cases - {selected_state}")
 fig1, ax1 = plt.subplots(figsize=(10, 4))
@@ -56,7 +62,8 @@ st.pyplot(fig2)
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
-    latest_row = state_df.dropna().iloc[-1]
+    state_df = state_df.dropna()
+    latest_row = state_df.iloc[-1]
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
