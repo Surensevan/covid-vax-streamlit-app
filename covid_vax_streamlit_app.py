@@ -80,7 +80,9 @@ if model_loaded:
     ])
 
     # Select prediction date
-    valid_dates = state_df['date'].dt.strftime('%Y-%m-%d').tolist()
+    valid_dates = state_df[state_df['date'].isin(
+        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
+    )]['date'].dt.strftime('%Y-%m-%d').tolist()
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
     selected_row = state_df[state_df['date'] == selected_date].iloc[0]
