@@ -80,12 +80,9 @@ if model_loaded:
     ])
 
     # Select prediction date
-    next_day_cases = df[df['state'] == selected_state][['date', 'cases_new']].copy()
-    next_day_cases['date'] = next_day_cases['date'] - pd.Timedelta(days=1)
     valid_dates = state_df[state_df['date'].isin(
-        next_day_cases[next_day_cases['cases_new'] > 0]['date']
+        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
     )]['date'].dt.strftime('%Y-%m-%d').tolist()
-
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
     selected_row = state_df[state_df['date'] == selected_date].iloc[0]
@@ -104,15 +101,20 @@ if model_loaded:
 
     features = selected_row[feature_cols].values.reshape(1, -1)
 
-    # Debug output
-    st.write(f"✅ Model expects {model.n_features_in_} features")
-    st.write(f"📥 Input shape: {features.shape}")
-    st.write("🧪 Any NaNs in input:", pd.DataFrame(features, columns=feature_cols).isnull().any().any())
-    st.write("🔍 Input Preview:", pd.DataFrame(features, columns=feature_cols))
-
     try:
         prediction = model.predict(features)[0]
         st.metric("Predicted New Cases (next day)", int(prediction))
+
+        # --- Actual class output ---
+        next_day = selected_date + pd.Timedelta(days=1)
+        actual_next_day = df[(df['state'] == selected_state) & (df['date'] == next_day)]
+
+        if not actual_next_day.empty:
+            actual_value = actual_next_day['cases_new'].values[0]
+            st.write("### 📊 Actual Cases (Next Day)")
+            st.write(f"**{int(actual_value)} cases** on {next_day.strftime('%Y-%m-%d')}")
+        else:
+            st.info("ℹ️ Actual value not available for the selected next day.")
 
     except ValueError as e:
         st.error(f"Prediction failed: {e}")
