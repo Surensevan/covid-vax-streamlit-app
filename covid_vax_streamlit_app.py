@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Load datasets
 @st.cache_data
@@ -66,7 +67,6 @@ st.pyplot(fig2)
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
-    # Drop NA rows for required features
     state_df = state_df.dropna(subset=[
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
@@ -75,17 +75,9 @@ if model_loaded:
         'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
         'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
         'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
-        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax',
+        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
         'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
     ])
-
-    # Select prediction date
-    valid_dates = state_df[state_df['date'].isin(
-        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
-    )]['date'].dt.strftime('%Y-%m-%d').tolist()
-    selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
-    selected_date = pd.to_datetime(selected_date_str)
-    selected_row = state_df[state_df['date'] == selected_date].iloc[0]
 
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
@@ -99,25 +91,28 @@ if model_loaded:
         'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
     ]
 
+    # Select prediction date
+    valid_dates = state_df[state_df['date'].isin(
+        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
+    )]['date'].dt.strftime('%Y-%m-%d').tolist()
+    selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
+    selected_date = pd.to_datetime(selected_date_str)
+    selected_row = state_df[state_df['date'] == selected_date].iloc[0]
+
     features = selected_row[feature_cols].values.reshape(1, -1)
 
-    try:
-        prediction = model.predict(features)[0]
-        st.metric("Predicted New Cases (next day)", int(prediction))
+    prediction = model.predict(features)[0]
+    st.metric("Predicted New Cases (next day)", int(prediction))
 
-        # --- Actual class output ---
-        next_day = selected_date + pd.Timedelta(days=1)
-        actual_next_day = df[(df['state'] == selected_state) & (df['date'] == next_day)]
+    # Evaluation block (manual sample based on selected row)
+    st.subheader("🧪 Model Evaluation Summary")
+    y_true = state_df['cases_new'].shift(-1).dropna()
+    X_eval = state_df[feature_cols].iloc[:-1]
+    y_pred = model.predict(X_eval)
 
-        if not actual_next_day.empty:
-            actual_value = actual_next_day['cases_new'].values[0]
-            st.write("### 📊 Actual Cases (Next Day)")
-            st.write(f"**{int(actual_value)} cases** on {next_day.strftime('%Y-%m-%d')}")
-        else:
-            st.info("ℹ️ Actual value not available for the selected next day.")
-
-    except ValueError as e:
-        st.error(f"Prediction failed: {e}")
+    st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
+    st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
+    st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
 else:
     st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
 
