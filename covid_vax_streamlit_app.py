@@ -67,18 +67,6 @@ st.pyplot(fig2)
 st.subheader("📈 Model Prediction (Demo)")
 
 if model_loaded:
-    state_df = state_df.dropna(subset=[
-        'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
-        'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
-        'daily_partial_child', 'daily_full_child', 'daily_booster_child', 'daily_booster2_child',
-        'daily_partial_adolescent', 'daily_full_adolescent', 'daily_booster_adolescent', 'daily_booster2_adolescent',
-        'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
-        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
-        'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
-        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
-        'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
-    ])
-
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
@@ -91,31 +79,38 @@ if model_loaded:
         'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
     ]
 
+    # Ensure valid data with no missing values for prediction
+    state_df = state_df.dropna(subset=feature_cols + ['cases_new'])
+
     # Select prediction date
-    valid_rows = state_df[state_df['date'].isin(
-        df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
-    )]
-    valid_dates = valid_rows['date'].dt.strftime('%Y-%m-%d').tolist()
+    valid_dates = state_df['date'].dt.strftime('%Y-%m-%d').tolist()
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
-    selected_row = valid_rows[valid_rows['date'] == selected_date][feature_cols]
 
-    if selected_row.shape[1] == len(feature_cols):
-        features = selected_row.values.reshape(1, -1)
-        prediction = model.predict(features)[0]
-        st.metric("Predicted New Cases (next day)", int(prediction))
+    selected_row = state_df[state_df['date'] == selected_date]
+    if not selected_row.empty:
+        selected_row_features = selected_row[feature_cols]
+        if selected_row_features.shape[1] == len(feature_cols):
+            try:
+                features = selected_row_features.values.reshape(1, -1)
+                prediction = model.predict(features)[0]
+                st.metric("Predicted New Cases (next day)", int(prediction))
+            except Exception as e:
+                st.error(f"Prediction failed: {str(e)}")
 
-        # Evaluation block (manual sample based on selected row)
-        st.subheader("🧪 Model Evaluation Summary")
-        y_true = state_df['cases_new'].shift(-1).dropna()
-        X_eval = state_df[feature_cols].iloc[:-1]
-        y_pred = model.predict(X_eval)
+            # Evaluation block (manual sample based on selected row)
+            st.subheader("🧪 Model Evaluation Summary")
+            y_true = state_df['cases_new'].shift(-1).dropna()
+            X_eval = state_df[feature_cols].iloc[:-1]
+            y_pred = model.predict(X_eval)
 
-        st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
-        st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
-        st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
+            st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
+            st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
+            st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
+        else:
+            st.error("🚫 Feature count mismatch. Model expects 38 features.")
     else:
-        st.error("🚫 Feature mismatch: Input does not match expected model features. Check data integrity.")
+        st.warning("⚠️ No valid data available for selected date.")
 else:
     st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
 
