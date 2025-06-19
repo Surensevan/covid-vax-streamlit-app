@@ -92,27 +92,30 @@ if model_loaded:
     ]
 
     # Select prediction date
-    valid_dates = state_df[state_df['date'].isin(
+    valid_rows = state_df[state_df['date'].isin(
         df[df['state'] == selected_state]['date'] - pd.Timedelta(days=1)
-    )]['date'].dt.strftime('%Y-%m-%d').tolist()
+    )]
+    valid_dates = valid_rows['date'].dt.strftime('%Y-%m-%d').tolist()
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
-    selected_row = state_df[state_df['date'] == selected_date].iloc[0]
+    selected_row = valid_rows[valid_rows['date'] == selected_date][feature_cols]
 
-    features = selected_row[feature_cols].values.reshape(1, -1)
+    if selected_row.shape[1] == len(feature_cols):
+        features = selected_row.values.reshape(1, -1)
+        prediction = model.predict(features)[0]
+        st.metric("Predicted New Cases (next day)", int(prediction))
 
-    prediction = model.predict(features)[0]
-    st.metric("Predicted New Cases (next day)", int(prediction))
+        # Evaluation block (manual sample based on selected row)
+        st.subheader("🧪 Model Evaluation Summary")
+        y_true = state_df['cases_new'].shift(-1).dropna()
+        X_eval = state_df[feature_cols].iloc[:-1]
+        y_pred = model.predict(X_eval)
 
-    # Evaluation block (manual sample based on selected row)
-    st.subheader("🧪 Model Evaluation Summary")
-    y_true = state_df['cases_new'].shift(-1).dropna()
-    X_eval = state_df[feature_cols].iloc[:-1]
-    y_pred = model.predict(X_eval)
-
-    st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
-    st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
-    st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
+        st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
+        st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
+        st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
+    else:
+        st.error("🚫 Feature mismatch: Input does not match expected model features. Check data integrity.")
 else:
     st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
 
