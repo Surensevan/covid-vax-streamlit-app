@@ -16,9 +16,9 @@ df = load_data()
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 
-# --- Date Selection ---
+# --- Date Selection (Single Dropdown) ---
 date_options = df['date'].dropna().dt.date.unique()
-selected_dates = st.multiselect("Select Date(s) for Prediction", options=sorted(date_options))
+selected_date = st.selectbox("Select Date for Prediction", options=sorted(date_options))
 
 # --- Model Upload ---
 uploaded_model = st.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
@@ -64,7 +64,7 @@ st.pyplot(fig2)
 # --- Model Prediction ---
 st.subheader("📈 Model Prediction")
 
-if model_loaded and selected_dates:
+if model_loaded and selected_date:
     feature_cols = [
         'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
         'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
@@ -79,19 +79,18 @@ if model_loaded and selected_dates:
 
     df = df.dropna(subset=feature_cols + ['cases_new'])
 
-    for selected_date in selected_dates:
-        st.markdown(f"---\n📅 **Date:** {selected_date}")
-        row = df[df['date'].dt.date == selected_date]
+    st.markdown(f"---\n📅 **Date:** {selected_date}")
+    row = df[df['date'].dt.date == selected_date]
 
-        if not row.empty:
-            try:
-                features = row[feature_cols].values.reshape(1, -1)
-                prediction = model.predict(features)[0]
-                st.metric("Predicted New Cases (next day)", int(prediction))
-            except Exception as e:
-                st.error(f"Prediction failed: {str(e)}")
-        else:
-            st.warning(f"⚠️ No valid data for selected date: {selected_date}")
+    if not row.empty:
+        try:
+            features = row[feature_cols].values.reshape(1, -1)
+            prediction = model.predict(features)[0]
+            st.metric("Predicted New Cases (next day)", int(prediction))
+        except Exception as e:
+            st.error(f"Prediction failed: {str(e)}")
+    else:
+        st.warning(f"⚠️ No valid data for selected date: {selected_date}")
 
     # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
@@ -107,4 +106,4 @@ if model_loaded and selected_dates:
     st.write("**RMSE:** {:.2f}".format(rmse))
     st.write("**R² Score:** {:.3f}".format(r2))
 else:
-    st.info("Please select at least one date and upload a valid model.")
+    st.info("Please select a date and upload a valid model.")
