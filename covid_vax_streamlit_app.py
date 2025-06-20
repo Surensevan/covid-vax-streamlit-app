@@ -75,9 +75,8 @@ if model_loaded:
     ]
 
     df = df.dropna(subset=feature_cols + ['cases_new'])
-    valid_dates = df['date'].dt.strftime('%Y-%m-%d').tolist()
     selected_date = df['date'].max()
-st.write(f"📅 Using latest available date for prediction: {selected_date.date()}")
+    st.write(f"📅 Using latest available date for prediction: {selected_date.date()}")
 
     selected_row = df[df['date'] == selected_date]
     if not selected_row.empty:
