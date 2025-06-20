@@ -86,22 +86,23 @@ if model_loaded:
                 features = selected_row_features.values.reshape(1, -1)
                 prediction = model.predict(features)[0]
                 st.metric("Predicted New Cases (next day)", int(prediction))
+
+                # Evaluation block
+                st.subheader("🧪 Model Evaluation Summary")
+                y_true = df['cases_new'].shift(-1).dropna()
+                X_eval = df[feature_cols].iloc[:-1]
+                y_pred = model.predict(X_eval)
+
+                mae = mean_absolute_error(y_true, y_pred)
+                rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+                r2 = r2_score(y_true, y_pred)
+
+                st.write("**MAE:** {:.2f}".format(mae))
+                st.write("**RMSE:** {:.2f}".format(rmse))
+                st.write("**R² Score:** {:.3f}".format(r2))
+
             except Exception as e:
                 st.error(f"Prediction failed: {str(e)}")
-
-            # Evaluation block
-            st.subheader("🧪 Model Evaluation Summary")
-            y_true = df['cases_new'].shift(-1).dropna()
-            X_eval = df[feature_cols].iloc[:-1]
-            y_pred = model.predict(X_eval)
-
-            mae = mean_absolute_error(y_true, y_pred)
-            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-            r2 = r2_score(y_true, y_pred)
-
-            st.write(f"**MAE:** {mae:.2f}")
-            st.write(f"**RMSE:** {rmse:.2f}")
-            st.write(f"**R² Score:** {r2:.3f}")
         else:
             st.error("🚫 Feature count mismatch. Model expects 39 features.")
     else:
