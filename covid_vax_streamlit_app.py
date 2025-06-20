@@ -9,10 +9,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_levels.csv", parse_dates=['date'])
-    demo_df = pd.read_csv("demographic_level_df.csv")
-    return df, demo_df
+    return df
 
-df, demo_df = load_data()
+df = load_data()
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia (Overall)")
 
