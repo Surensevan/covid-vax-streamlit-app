@@ -79,34 +79,24 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction ---
+# --- Model Prediction & Evaluation (Latest Available Row) ---
 st.subheader("📈 Model Prediction")
 
-# --- Date Selection (Dropdown without state filter) ---
-date_options = df['date'].dropna().dt.date.unique()
-selected_date = st.selectbox("Select Date for Prediction", options=sorted(date_options))
-
-if model_loaded and selected_date:
+if model_loaded:
     df = df.dropna(subset=feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7', 'cases_new'])
+    latest_row = df.iloc[-1]
 
-    st.markdown(f"---\n📅 **Date:** {selected_date}")
-    row = df[df['date'].dt.date == selected_date]
-
-    if not row.empty:
-        try:
-            all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
-            features = row[all_features].values.reshape(1, -1)
-            prediction = model.predict(features)[0]
-            st.metric("Predicted New Cases (next day)", int(prediction))
-        except Exception as e:
-            st.error(f"Prediction failed: {str(e)}")
-    else:
-        st.warning(f"⚠️ No valid data for selected date: {selected_date}")
+    try:
+        all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+        features = latest_row[all_features].values.reshape(1, -1)
+        prediction = model.predict(features)[0]
+        st.metric("Predicted New Cases (Next Day)", int(prediction))
+    except Exception as e:
+        st.error(f"Prediction failed: {str(e)}")
 
     # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
     try:
-        all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
         df_eval = df.dropna(subset=all_features + ['cases_new']).copy()
         X_eval = df_eval[all_features]
         y_true = df_eval['cases_new'].shift(-1).dropna()
@@ -124,4 +114,4 @@ if model_loaded and selected_date:
     except Exception as e:
         st.error(f"Prediction failed: {str(e)}")
 else:
-    st.info("Please select a date and upload a valid model.")
+    st.info("Please upload a valid model to proceed.")
