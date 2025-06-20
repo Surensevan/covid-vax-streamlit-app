@@ -105,16 +105,23 @@ if model_loaded and selected_date:
 
     # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
-    y_true = df['cases_new'].shift(-1).dropna()
-    X_eval = df[feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']].iloc[:-1]
-    y_pred = model.predict(X_eval)
+    try:
+        all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+        df_eval = df.dropna(subset=all_features + ['cases_new']).copy()
+        X_eval = df_eval[all_features]
+        y_true = df_eval['cases_new'].shift(-1).dropna()
+        X_eval = X_eval.loc[y_true.index]
 
-    mae = mean_absolute_error(y_true, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    r2 = r2_score(y_true, y_pred)
+        y_pred = model.predict(X_eval)
 
-    st.write("**MAE:** {:.2f}".format(mae))
-    st.write("**RMSE:** {:.2f}".format(rmse))
-    st.write("**R² Score:** {:.3f}".format(r2))
+        mae = mean_absolute_error(y_true, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+        r2 = r2_score(y_true, y_pred)
+
+        st.write("**MAE:** {:.2f}".format(mae))
+        st.write("**RMSE:** {:.2f}".format(rmse))
+        st.write("**R² Score:** {:.3f}".format(r2))
+    except Exception as e:
+        st.error(f"Prediction failed: {str(e)}")
 else:
     st.info("Please select a date and upload a valid model.")
