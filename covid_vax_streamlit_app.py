@@ -14,13 +14,9 @@ def load_data():
 
 df, demo_df = load_data()
 
-st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
+st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia (Overall)")
 
-# Sidebar - State selection
-states = df['state'].unique()
-selected_state = st.sidebar.selectbox("Select a State", sorted(states))
-
-# Load trained model via upload AFTER state selection
+# Sidebar - Model Upload
 uploaded_model = st.sidebar.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
@@ -32,20 +28,17 @@ else:
     model_loaded = False
     st.sidebar.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
 
-# Filter by state
-state_df = df[df['state'] == selected_state].copy()
-
 # --- Add lag features (required for prediction) ---
-state_df = state_df.sort_values("date")
-state_df['cases_lag_1'] = state_df['cases_new'].shift(1)
-state_df['cases_lag_7'] = state_df['cases_new'].shift(7)
-state_df['cases_lag_14'] = state_df['cases_new'].shift(14)
-state_df['cases_ma_7'] = state_df['cases_new'].rolling(window=7).mean()
+df = df.sort_values("date")
+df['cases_lag_1'] = df['cases_new'].shift(1)
+df['cases_lag_7'] = df['cases_new'].shift(7)
+df['cases_lag_14'] = df['cases_new'].shift(14)
+df['cases_ma_7'] = df['cases_new'].rolling(window=7).mean()
 
 # --- Chart: Daily New Cases ---
-st.subheader(f"🦠 Daily New COVID-19 Cases - {selected_state}")
+st.subheader("🦠 Daily New COVID-19 Cases (Overall)")
 fig1, ax1 = plt.subplots(figsize=(10, 4))
-ax1.plot(state_df['date'], state_df['cases_new'], label='New Cases', color='red')
+ax1.plot(df['date'], df['cases_new'], label='New Cases', color='red')
 ax1.set_xlabel("Date")
 ax1.set_ylabel("Cases")
 ax1.set_title("Daily New Cases")
@@ -54,9 +47,9 @@ ax1.legend()
 st.pyplot(fig1)
 
 # --- Chart: Cumulative Vaccination ---
-st.subheader(f"💉 Cumulative Full Adult Vaccination - {selected_state}")
+st.subheader("💉 Cumulative Full Adult Vaccination (Overall)")
 fig2, ax2 = plt.subplots(figsize=(10, 4))
-ax2.plot(state_df['date'], state_df['daily_full_adult'].cumsum(), label='Full Adult Vax', color='green')
+ax2.plot(df['date'], df['daily_full_adult'].cumsum(), label='Full Adult Vax', color='green')
 ax2.set_xlabel("Date")
 ax2.set_ylabel("Cumulative Count")
 ax2.set_title("Vaccination Progress")
@@ -64,8 +57,8 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction (Updated with exact training features) ---
-st.subheader("📈 Model Prediction (Demo)")
+# --- Model Prediction (Overall only) ---
+st.subheader("📈 Model Prediction (Overall)")
 
 if model_loaded:
     feature_cols = [
@@ -80,15 +73,12 @@ if model_loaded:
         'cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7'
     ]
 
-    # Ensure valid data with no missing values for prediction
-    state_df = state_df.dropna(subset=feature_cols + ['cases_new'])
-
-    # Select prediction date
-    valid_dates = state_df['date'].dt.strftime('%Y-%m-%d').tolist()
+    df = df.dropna(subset=feature_cols + ['cases_new'])
+    valid_dates = df['date'].dt.strftime('%Y-%m-%d').tolist()
     selected_date_str = st.selectbox("Choose a Date for Prediction", valid_dates)
     selected_date = pd.to_datetime(selected_date_str)
 
-    selected_row = state_df[state_df['date'] == selected_date]
+    selected_row = df[df['date'] == selected_date]
     if not selected_row.empty:
         selected_row_features = selected_row[feature_cols]
         if selected_row_features.shape[1] == len(feature_cols):
@@ -101,8 +91,8 @@ if model_loaded:
 
             # Evaluation block
             st.subheader("🧪 Model Evaluation Summary")
-            y_true = state_df['cases_new'].shift(-1).dropna()
-            X_eval = state_df[feature_cols].iloc[:-1]
+            y_true = df['cases_new'].shift(-1).dropna()
+            X_eval = df[feature_cols].iloc[:-1]
             y_pred = model.predict(X_eval)
 
             st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
@@ -114,14 +104,3 @@ if model_loaded:
         st.warning("⚠️ No valid data available for selected date.")
 else:
     st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
-
-# --- Demographic Info ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("📍 Demographic Snapshot")
-if selected_state in demo_df['state'].values:
-    state_info = demo_df[demo_df['state'] == selected_state].iloc[0]
-    st.sidebar.write(f"**Population**: {state_info['population']:.0f}k")
-    st.sidebar.write(f"**Mean Income**: RM {state_info['income_mean']:.2f}")
-    st.sidebar.write(f"**Median Income**: RM {state_info['income_median']:.2f}")
-else:
-    st.sidebar.write("No demographic data available.")
