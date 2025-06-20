@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import numpy as np
 
 # Load datasets
 @st.cache_data
@@ -95,9 +96,13 @@ if model_loaded:
             X_eval = df[feature_cols].iloc[:-1]
             y_pred = model.predict(X_eval)
 
-            st.write(f"**MAE:** {mean_absolute_error(y_true, y_pred):.2f}")
-            st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
-            st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
+            mae = mean_absolute_error(y_true, y_pred)
+            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+            r2 = r2_score(y_true, y_pred)
+
+            st.write(f"**MAE:** {mae:.2f}")
+            st.write(f"**RMSE:** {rmse:.2f}")
+            st.write(f"**R² Score:** {r2:.3f}")
         else:
             st.error("🚫 Feature count mismatch. Model expects 39 features.")
     else:
