@@ -15,20 +15,30 @@ feature_cols = [
     'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
     'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
     'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
-    'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
-    'cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7'
+    'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
 ]
 
 # Load dataset
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_levels.csv", parse_dates=['date'])
-    expected_columns = set(feature_cols + ['cases_new', 'date'])
+    df = df.sort_values("date")
+
+    # Add lag features after loading
+    df['cases_lag_1'] = df['cases_new'].shift(1)
+    df['cases_lag_7'] = df['cases_new'].shift(7)
+    df['cases_lag_14'] = df['cases_new'].shift(14)
+    df['cases_ma_7'] = df['cases_new'].rolling(window=7).mean()
+
+    lag_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+    all_features = feature_cols + lag_features
+
+    expected_columns = set(all_features + ['cases_new', 'date'])
     missing_columns = expected_columns - set(df.columns)
     if missing_columns:
         st.error(f"❌ Missing columns in data: {missing_columns}")
         st.stop()
-    df = df[[*feature_cols, 'cases_new', 'date']].copy()
+    df = df[[*all_features, 'cases_new', 'date']].copy()
     return df
 
 df = load_data()
@@ -46,13 +56,6 @@ else:
     model = None
     model_loaded = False
     st.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
-
-# --- Add lag features ---
-df = df.sort_values("date")
-df['cases_lag_1'] = df['cases_new'].shift(1)
-df['cases_lag_7'] = df['cases_new'].shift(7)
-df['cases_lag_14'] = df['cases_new'].shift(14)
-df['cases_ma_7'] = df['cases_new'].rolling(window=7).mean()
 
 # --- Chart: Daily New Cases ---
 st.subheader("🦠 Daily New COVID-19 Cases")
@@ -84,14 +87,15 @@ date_options = df['date'].dropna().dt.date.unique()
 selected_date = st.selectbox("Select Date for Prediction", options=sorted(date_options))
 
 if model_loaded and selected_date:
-    df = df.dropna(subset=feature_cols + ['cases_new'])
+    df = df.dropna(subset=feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7', 'cases_new'])
 
     st.markdown(f"---\n📅 **Date:** {selected_date}")
     row = df[df['date'].dt.date == selected_date]
 
     if not row.empty:
         try:
-            features = row[feature_cols].values.reshape(1, -1)
+            all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+            features = row[all_features].values.reshape(1, -1)
             prediction = model.predict(features)[0]
             st.metric("Predicted New Cases (next day)", int(prediction))
         except Exception as e:
@@ -102,7 +106,7 @@ if model_loaded and selected_date:
     # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
     y_true = df['cases_new'].shift(-1).dropna()
-    X_eval = df[feature_cols].iloc[:-1]
+    X_eval = df[feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']].iloc[:-1]
     y_pred = model.predict(X_eval)
 
     mae = mean_absolute_error(y_true, y_pred)
