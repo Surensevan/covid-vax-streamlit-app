@@ -17,17 +17,17 @@ df = load_data()
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia (Overall)")
 
-# Sidebar - Model Upload
-uploaded_model = st.sidebar.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
+# --- Model Upload ---
+uploaded_model = st.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
     model = joblib.load(uploaded_model)
     model_loaded = True
-    st.sidebar.success("✅ Model loaded successfully.")
+    st.success("✅ Model loaded successfully.")
 else:
     model = None
     model_loaded = False
-    st.sidebar.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
+    st.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
 
 # --- Add lag features (required for prediction) ---
 df = df.sort_values("date")
@@ -108,4 +108,4 @@ if model_loaded:
     else:
         st.warning("⚠️ No valid data available for selected date.")
 else:
-    st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl' in the sidebar.")
+    st.warning("Model file not loaded. Please upload 'random_forest_model_better.pkl'.")
