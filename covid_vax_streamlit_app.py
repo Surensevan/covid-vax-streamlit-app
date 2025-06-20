@@ -23,6 +23,11 @@ feature_cols = [
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_levels.csv", parse_dates=['date'])
+    expected_columns = set(feature_cols + ['cases_new', 'date'])
+    missing_columns = expected_columns - set(df.columns)
+    if missing_columns:
+        st.error(f"❌ Missing columns in data: {missing_columns}")
+        st.stop()
     df = df[[*feature_cols, 'cases_new', 'date']].copy()
     return df
 
@@ -74,7 +79,7 @@ st.pyplot(fig2)
 # --- Model Prediction ---
 st.subheader("📈 Model Prediction")
 
-# --- Date Selection ---
+# --- Date Selection (Dropdown without state filter) ---
 date_options = df['date'].dropna().dt.date.unique()
 selected_date = st.selectbox("Select Date for Prediction", options=sorted(date_options))
 
