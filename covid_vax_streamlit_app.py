@@ -39,6 +39,7 @@ state_df = df[df['state'] == selected_state].copy()
 state_df = state_df.sort_values("date")
 state_df['cases_lag_1'] = state_df['cases_new'].shift(1)
 state_df['cases_lag_7'] = state_df['cases_new'].shift(7)
+state_df['cases_lag_14'] = state_df['cases_new'].shift(14)
 state_df['cases_ma_7'] = state_df['cases_new'].rolling(window=7).mean()
 
 # --- Chart: Daily New Cases ---
@@ -76,7 +77,7 @@ if model_loaded:
         'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
         'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
         'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
-        'cases_lag_1', 'cases_lag_7', 'cases_ma_7'
+        'cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7'
     ]
 
     # Ensure valid data with no missing values for prediction
@@ -98,7 +99,7 @@ if model_loaded:
             except Exception as e:
                 st.error(f"Prediction failed: {str(e)}")
 
-            # Evaluation block (manual sample based on selected row)
+            # Evaluation block
             st.subheader("🧪 Model Evaluation Summary")
             y_true = state_df['cases_new'].shift(-1).dropna()
             X_eval = state_df[feature_cols].iloc[:-1]
@@ -108,7 +109,7 @@ if model_loaded:
             st.write(f"**RMSE:** {mean_squared_error(y_true, y_pred, squared=False):.2f}")
             st.write(f"**R² Score:** {r2_score(y_true, y_pred):.3f}")
         else:
-            st.error("🚫 Feature count mismatch. Model expects 38 features.")
+            st.error("🚫 Feature count mismatch. Model expects 39 features.")
     else:
         st.warning("⚠️ No valid data available for selected date.")
 else:
