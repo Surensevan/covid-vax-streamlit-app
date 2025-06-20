@@ -10,6 +10,21 @@ import numpy as np
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_levels.csv", parse_dates=['date'])
+
+    # Define only relevant features (39 features + target + date)
+    feature_cols = [
+        'cases_import', 'cases_recovered', 'cases_active', 'cases_cluster',
+        'cases_unvax', 'cases_pvax', 'cases_fvax', 'cases_boost',
+        'daily_partial_child', 'daily_full_child', 'daily_booster_child', 'daily_booster2_child',
+        'daily_partial_adolescent', 'daily_full_adolescent', 'daily_booster_adolescent', 'daily_booster2_adolescent',
+        'daily_partial_adult', 'daily_full_adult', 'daily_booster_adult', 'daily_booster2_adult',
+        'daily_partial_elderly', 'daily_full_elderly', 'daily_booster_elderly', 'daily_booster2_elderly',
+        'admitted_covid', 'discharged_covid', 'icu_covid', 'vent_covid', 'beds_covid', 'beds_icu_covid',
+        'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO',
+        'cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7'
+    ]
+
+    df = df[[*feature_cols, 'cases_new', 'date']].copy()
     return df
 
 df = load_data()
