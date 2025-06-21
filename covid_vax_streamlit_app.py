@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 # Define relevant features globally
@@ -19,9 +18,6 @@ feature_cols = [
     'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
 ]
 
-lag_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
-all_features = feature_cols + lag_features
-
 # Load dataset
 @st.cache_data
 def load_data():
@@ -33,6 +29,9 @@ def load_data():
     df['cases_lag_7'] = df['cases_new'].shift(7)
     df['cases_lag_14'] = df['cases_new'].shift(14)
     df['cases_ma_7'] = df['cases_new'].rolling(window=7).mean()
+
+    lag_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+    all_features = feature_cols + lag_features
 
     expected_columns = set(all_features + ['cases_new', 'date'])
     missing_columns = expected_columns - set(df.columns)
@@ -84,14 +83,13 @@ st.pyplot(fig2)
 st.subheader("📈 Model Prediction")
 
 if model_loaded:
-    df = df.dropna(subset=all_features + ['cases_new'])
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df[all_features])
+    df = df.dropna(subset=feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7', 'cases_new'])
+    latest_row = df.iloc[-1]
 
-    # Predict the next day case using latest row
-    latest_features = X_scaled[-1].reshape(1, -1)
     try:
-        prediction = model.predict(latest_features)[0]
+        all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+        features = latest_row[all_features].values.reshape(1, -1)
+        prediction = model.predict(features)[0]
         st.metric("Predicted New Cases (Next Day)", int(prediction))
     except Exception as e:
         st.error(f"Prediction failed: {str(e)}")
@@ -99,11 +97,12 @@ if model_loaded:
     # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
     try:
-        y_true = df['cases_new'].shift(-1).dropna()
-        X_eval = df.loc[y_true.index, all_features]
-        X_eval_scaled = scaler.transform(X_eval)
+        df_eval = df.dropna(subset=all_features + ['cases_new']).copy()
+        X_eval = df_eval[all_features]
+        y_true = df_eval['cases_new'].shift(-1).dropna()
+        X_eval = X_eval.loc[y_true.index]
 
-        y_pred = model.predict(X_eval_scaled)
+        y_pred = model.predict(X_eval)
 
         mae = mean_absolute_error(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
