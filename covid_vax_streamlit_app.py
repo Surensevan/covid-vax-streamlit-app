@@ -41,7 +41,9 @@ def load_data():
     df = df[[*all_features, 'cases_new', 'date']].copy()
     return df
 
+# Load and preprocess data
 df = load_data()
+df.dropna(subset=all_features + ['cases_new'], inplace=True)
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 
@@ -50,12 +52,10 @@ uploaded_model = st.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
     scaler, model = joblib.load(uploaded_model)
-    model_loaded = True
     st.success("✅ Model and scaler loaded successfully.")
 else:
     model = None
     scaler = None
-    model_loaded = False
     st.warning("⚠️ Please upload the model with scaler (e.g., 'random_forest_model_with_scaler.pkl').")
 
 # --- Chart: Daily New Cases ---
@@ -80,37 +80,33 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction & Evaluation (Latest Available Row) ---
+# --- Model Prediction & Evaluation ---
 st.subheader("📈 Model Prediction")
 
-if model_loaded:
-    df = df.dropna(subset=all_features + ['cases_new'])
-    X_scaled = scaler.transform(df[all_features])
-
-    # Predict the next day case using latest row
-    latest_features = X_scaled[-1].reshape(1, -1)
+if model is not None:
     try:
-        prediction = model.predict(latest_features)[0]
+        latest_row = df.iloc[-1:][all_features]
+        latest_scaled = scaler.transform(latest_row)
+        prediction = model.predict(latest_scaled)[0]
         st.metric("Predicted New Cases (Next Day)", int(prediction))
     except Exception as e:
         st.error(f"Prediction failed: {str(e)}")
 
-    # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
     try:
         y_true = df['cases_new'].shift(-1).dropna()
-        X_eval = df.loc[y_true.index, all_features]
+        eval_df = df.loc[y_true.index]
+        X_eval = eval_df[all_features]
         X_eval_scaled = scaler.transform(X_eval)
-
         y_pred = model.predict(X_eval_scaled)
 
         mae = mean_absolute_error(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         r2 = r2_score(y_true, y_pred)
 
-        st.write("**MAE:** {:.2f}".format(mae))
-        st.write("**RMSE:** {:.2f}".format(rmse))
-        st.write("**R² Score:** {:.3f}".format(r2))
+        st.write(f"**MAE:** {mae:.2f}")
+        st.write(f"**RMSE:** {rmse:.2f}")
+        st.write(f"**R² Score:** {r2:.3f}")
     except Exception as e:
         st.error(f"Evaluation failed: {str(e)}")
 else:
