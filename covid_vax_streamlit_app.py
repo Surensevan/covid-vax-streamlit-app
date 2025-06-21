@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 # Define relevant features globally
@@ -50,13 +49,14 @@ st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 uploaded_model = st.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
-    model = joblib.load(uploaded_model)
+    scaler, model = joblib.load(uploaded_model)
     model_loaded = True
-    st.success("✅ Model loaded successfully.")
+    st.success("✅ Model and scaler loaded successfully.")
 else:
     model = None
+    scaler = None
     model_loaded = False
-    st.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
+    st.warning("⚠️ Please upload the model with scaler (e.g., 'random_forest_model_with_scaler.pkl').")
 
 # --- Chart: Daily New Cases ---
 st.subheader("🦠 Daily New COVID-19 Cases")
@@ -85,8 +85,7 @@ st.subheader("📈 Model Prediction")
 
 if model_loaded:
     df = df.dropna(subset=all_features + ['cases_new'])
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df[all_features])
+    X_scaled = scaler.transform(df[all_features])
 
     # Predict the next day case using latest row
     latest_features = X_scaled[-1].reshape(1, -1)
@@ -113,6 +112,6 @@ if model_loaded:
         st.write("**RMSE:** {:.2f}".format(rmse))
         st.write("**R² Score:** {:.3f}".format(r2))
     except Exception as e:
-        st.error(f"Prediction failed: {str(e)}")
+        st.error(f"Evaluation failed: {str(e)}")
 else:
-    st.info("Please upload a valid model to proceed.")
+    st.info("Please upload a valid model with scaler to proceed.")
