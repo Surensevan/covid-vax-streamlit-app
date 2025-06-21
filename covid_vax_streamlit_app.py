@@ -18,9 +18,6 @@ feature_cols = [
     'total_child_vax', 'total_adol_vax', 'total_adult_vax', 'total_elderly_vax', 'MCO'
 ]
 
-lag_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
-all_features = feature_cols + lag_features
-
 # Load dataset
 @st.cache_data
 def load_data():
@@ -33,6 +30,9 @@ def load_data():
     df['cases_lag_14'] = df['cases_new'].shift(14)
     df['cases_ma_7'] = df['cases_new'].rolling(window=7).mean()
 
+    lag_features = ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+    all_features = feature_cols + lag_features
+
     expected_columns = set(all_features + ['cases_new', 'date'])
     missing_columns = expected_columns - set(df.columns)
     if missing_columns:
@@ -41,9 +41,7 @@ def load_data():
     df = df[[*all_features, 'cases_new', 'date']].copy()
     return df
 
-# Load and preprocess data
 df = load_data()
-df.dropna(subset=all_features + ['cases_new'], inplace=True)
 
 st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 
@@ -51,12 +49,13 @@ st.title("📊 COVID-19 Vaccination Impact Dashboard - Malaysia")
 uploaded_model = st.file_uploader("📤 Upload Model File (.pkl)", type=["pkl"])
 
 if uploaded_model is not None:
-    scaler, model = joblib.load(uploaded_model)
-    st.success("✅ Model and scaler loaded successfully.")
+    model = joblib.load(uploaded_model)
+    model_loaded = True
+    st.success("✅ Model loaded successfully.")
 else:
     model = None
-    scaler = None
-    st.warning("⚠️ Please upload the model with scaler (e.g., 'random_forest_model_with_scaler.pkl').")
+    model_loaded = False
+    st.warning("⚠️ Please upload 'random_forest_model_better.pkl'.")
 
 # --- Chart: Daily New Cases ---
 st.subheader("🦠 Daily New COVID-19 Cases")
@@ -80,34 +79,39 @@ ax2.grid(True)
 ax2.legend()
 st.pyplot(fig2)
 
-# --- Model Prediction & Evaluation ---
+# --- Model Prediction & Evaluation (Latest Available Row) ---
 st.subheader("📈 Model Prediction")
 
-if model is not None:
+if model_loaded:
+    df = df.dropna(subset=feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7', 'cases_new'])
+    latest_row = df.iloc[-1]
+
     try:
-        latest_row = df.iloc[-1:][all_features]
-        latest_scaled = scaler.transform(latest_row)
-        prediction = model.predict(latest_scaled)[0]
+        all_features = feature_cols + ['cases_lag_1', 'cases_lag_7', 'cases_lag_14', 'cases_ma_7']
+        features = latest_row[all_features].values.reshape(1, -1)
+        prediction = model.predict(features)[0]
         st.metric("Predicted New Cases (Next Day)", int(prediction))
     except Exception as e:
         st.error(f"Prediction failed: {str(e)}")
 
+    # Evaluation block
     st.subheader("🧪 Model Evaluation Summary")
     try:
-        y_true = df['cases_new'].shift(-1).dropna()
-        eval_df = df.loc[y_true.index]
-        X_eval = eval_df[all_features]
-        X_eval_scaled = scaler.transform(X_eval)
-        y_pred = model.predict(X_eval_scaled)
+        df_eval = df.dropna(subset=all_features + ['cases_new']).copy()
+        X_eval = df_eval[all_features]
+        y_true = df_eval['cases_new'].shift(-1).dropna()
+        X_eval = X_eval.loc[y_true.index]
+
+        y_pred = model.predict(X_eval)
 
         mae = mean_absolute_error(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         r2 = r2_score(y_true, y_pred)
 
-        st.write(f"**MAE:** {mae:.2f}")
-        st.write(f"**RMSE:** {rmse:.2f}")
-        st.write(f"**R² Score:** {r2:.3f}")
+        st.write("**MAE:** {:.2f}".format(mae))
+        st.write("**RMSE:** {:.2f}".format(rmse))
+        st.write("**R² Score:** {:.3f}".format(r2))
     except Exception as e:
-        st.error(f"Evaluation failed: {str(e)}")
+        st.error(f"Prediction failed: {str(e)}")
 else:
-    st.info("Please upload a valid model with scaler to proceed.")
+    st.info("Please upload a valid model to proceed.")
